@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Farm Reader</title>
+    <style>
+      * {
+        box-sizing: border-box;
+        margin: 0%;
+      }
+      body {
+        height: 100vh;
+        position: relative;
+        width: 100%;
+        background: url('/static/img/bg.jpg');
+        display: flex;
+        flex-direction: column;
+        font-family: sans-serif;
+      }
+      ul{
+        display: flex;
+        flex-direction: column;
+        gap: 10px;
+      }
+      .top img, .top > div {
+        height: 650px;
+        aspect-ratio: 1/1;
+        background: rgba(255, 255, 255, 0.506);
+        border-radius: 10px;
+        font-size: 2rem;
+        padding: 10px;
+      }
+      
+      .bg {
+        position: absolute;
+        top: 0;
+        left: 0;
+        height: 100%;
+        width: 100%;
+        background: #00000076;
+      }
+      .top {
+        z-index: 10;
+        display: flex;
+        width: 100%;
+        justify-content: center;
+        gap: 5rem;
+        align-items: center;
+        padding: 4rem;
+      }
+      .bottom, form {
+        z-index: 10;
+        padding: 2rem;
+        display: flex;
+        flex-direction: column;
+        gap: 2rem;
+      }
+      button {
+        font-size: 2rem;
+        color: rgb(255, 255, 255);
+        border: 1px solid black;
+        border-radius: 5px;
+        padding: 1rem;
+      }
+      .right button:nth-of-type(1), .left button:nth-of-type(1) {
+        background: rgba(0, 128, 0, 0.566);
+      }
+      .right button:nth-of-type(2),.right button:nth-of-type(5),  .left button:nth-of-type(2) {
+        background: rgba(255, 0, 0, 0.467);
+      }
+      .right button:nth-of-type(3) {
+        background: rgba(255, 255, 0, 0.433);
+      }
+      .right button:nth-of-type(4) {
+        background: rgba(0, 0, 255, 0.369);
+      }
+      .right button:hover , .left button:hover {
+        cursor: pointer;
+        background: transparent;
+      }
+
+      
+    </style>
+  </head>
+  <body>
+    <div class="bg"></div>
+    <div class="top">
+      <img src="{{url_for('video')}}" alt="video feed" width="740" height="580" /> 
+      <div id="data">
+        <div class="sensor">Temperature: <span id="temperature">Loading...</span> °C</div>
+        
+        
+        <div class="sensor">Moisture: <span id="moisture">Loading...</span> %mˆ3</div>
+        <div class="sensor">Electrical Conductivity (EC): <span id="ec">Loading...</span> µS/cm</div>
+        <div class="sensor">Salinity: <span id="salinity">Loading...</span> µS/cm</div>
+        <div class="sensor">N: <span id="n">Loading...</span> mg/Kg</div>
+        <div class="sensor">P: <span id="p">Loading...</span> mg/Kg</div>
+        <div class="sensor">K: <span id="k">Loading...</span> mg/Kg</div>
+        <div class="sensor">pH: <span id="ph">Loading...</span></div>
+    </div>
+    </div>
+    <div class="bottom">
+      <form action="/" method="POST">
+        <div class="right">
+          <button value="1" name="forward">Forward</button>
+          <button value="1" name="back">Back</button>
+          <button value="1" name="right">Right</button>
+          <button value="1" name="left">Left</button>
+          <button value="1" name="stop">Stop</button>
+        </div>
+        <div class="left">
+          <button value="1" name="up">Upward</button>
+          <button value="1" name="down">Downward</button>
+        </div>
+      </form>
+    </div>
+
+
+    <script>
+        // Create an EventSource to listen for server-sent events (SSE)
+        const eventSource = new EventSource("/sensor_data");
+
+        // Update the web page with sensor data as it is received
+        eventSource.onmessage = function(event) {
+            const data = JSON.parse(event.data);
+            document.getElementById("temperature").textContent = data.temperature.toFixed(1);
+            document.getElementById("n").textContent = data.n.toFixed(1);
+            document.getElementById("p").textContent = data.p;
+            document.getElementById("moisture").textContent = data.moisture;
+            document.getElementById("ec").textContent = data.ec;
+            document.getElementById("salinity").textContent = data.salinity;
+            document.getElementById("k").textContent = data.k;
+            document.getElementById("ph").textContent = data.ph.toFixed(1);
+        };
+
+        eventSource.onerror = function(err) {
+            console.error("Error receiving updates", err);
+        };
+
+      const  buttons = document.getElementsByTagName("button");
+        
+        for(var i = 0; i<buttons.length; i++ ){
+          buttons[i].addEventListener("click",async (e) =>{
+            e.preventDefault();
+            const form = new FormData();
+            form.append(e.target.getAttribute("name"), e.target.value );
+            await fetch("/", {
+            method: "POST",
+      // Set the FormData instance as the request body
+            body: form,
+    });
+          })
+        }
+
+    addEventListener('keydown', async(e) =>{
+      const key = e.keyCode;
+      const form = new FormData();
+      switch(key){
+        case 37 :
+          form.append("left","1");
+        break; 
+        case 38:
+          form.append("forward","1");
+        break;
+        case 39:
+          form.append("right","1");  
+        break;
+        case 40:
+          form.append("back","1"); 
+        break;
+        case 83:
+          form.append("stop","1"); 
+        break;
+        case 85:
+          form.append("up","1"); 
+        break;
+        case 74:
+          form.append("down","1");
+        break;  
+        default: 
+          form = null;  
+      }
+      await fetch("/", {
+            method: "POST",
+      // Set the FormData instance as the request body
+            body: form,
+    });
+    })    
+    </script>
+  </body>
+</html>
